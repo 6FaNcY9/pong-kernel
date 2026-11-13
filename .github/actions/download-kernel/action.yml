@@ -14,6 +14,10 @@ inputs:
   os_patch_level:
     description: 'OS patch level (e.g., 2024-01)'
     required: true
+  common_commit:
+    description: 'pong-kernel: exact kernel/common commit to build (empty = branch head, as upstream)'
+    required: false
+    default: ''
 
 outputs:
   deprecated_branch:
@@ -158,6 +162,17 @@ runs:
           fi
           attempt=$((attempt+1))
         done
+
+    - name: Pin Kernel Common Commit
+      if: inputs.common_commit != ''
+      shell: bash
+      working-directory: ${{ github.workspace }}/kernel
+      run: |
+        set -euo pipefail
+        # the monthly branch keeps moving; build the pinned commit and fail if it cannot be had
+        git -C common fetch --depth=1 https://android.googlesource.com/kernel/common "${{ inputs.common_commit }}"
+        git -C common checkout --detach "${{ inputs.common_commit }}"
+        [ "$(git -C common rev-parse HEAD)" = "${{ inputs.common_commit }}" ] || { echo "kernel/common is not at the pinned commit" >&2; exit 1; }
 
     # --- Non-repo steps (commented out; we only use repo now) ---
     # - name: Download manifest.xml for branch (with deprecated fallback)

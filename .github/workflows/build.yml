@@ -60,6 +60,10 @@ on:
         required: false
         type: string
         default: ""
+      common_commit:
+        required: false
+        type: string
+        default: ""
       anykernel3_commit:
         required: false
         type: string
@@ -174,6 +178,7 @@ jobs:
           android_version: ${{ inputs.android_version }}
           kernel_version: ${{ inputs.kernel_version }}
           os_patch_level: ${{ inputs.os_patch_level }}
+          common_commit: ${{ inputs.common_commit }}
 
       - name: Spoof /proc/config.gz With Stock Config
         uses: ./.github/actions/stock-config

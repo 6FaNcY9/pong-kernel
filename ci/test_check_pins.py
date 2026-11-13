@@ -97,6 +97,15 @@ class CheckPins(unittest.TestCase):
             self.assertIn("contents: read", head, wf)
             self.assertNotIn(": write", head, wf)
 
+    def test_kernel_source_is_pinned(self):
+        # the android12-5.10-2026-10 branch moved after r22 (Nov 9/10 commits); build from the r22-era commit
+        self.assertIn("common_commit: 69ab3fcf48c521f021298acd2647c5f3923a9c4f",
+                      (REPO / ".github/workflows/pong.yml").read_text())
+        dl = (REPO / ".github/actions/download-kernel/action.yml").read_text()
+        self.assertIn('[ "$(git -C common rev-parse HEAD)" = "${{ inputs.common_commit }}" ]', dl)
+        self.assertIn("common_commit: ${{ inputs.common_commit }}", (REPO / ".github/workflows/build.yml").read_text())
+        self.assertIn("common_commit: ${{ inputs.common_commit }}", (REPO / ".github/workflows/prepare.yml").read_text())
+
 
 if __name__ == "__main__":
     unittest.main()
