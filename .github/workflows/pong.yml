@@ -1,0 +1,35 @@
+name: Build pong kernel
+# Builds exactly the kernel running on pong (Nothing Phone 2): WildKernels r22, 5.10.269-android12-2026-10,
+# BakaSU + susfs, AnyKernel3 zip. Every source is pinned; values copied from upstream main.yml at 8d8e033
+# (job build-android12-5-10, resolve-sources pins, r22 release notes). Manual runs only.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write  # build.yml declares contents: write; a called workflow cannot get more than the caller grants
+  actions: write   # build.yml uploads artifacts and manages its caches
+
+jobs:
+  build:
+    uses: ./.github/workflows/prepare.yml
+    with:
+      runner: ubuntu-24.04                                    # main.yml kernel_runner default
+      config_file: .github/config/android12-5.10.json         # main.yml build-android12-5-10
+      os_patch_level: 2026-10                                 # one row: sublevel 269
+      feature_set: SUSFS+NoMount+BBG+NET+DS+NTSync+Ptrace+Unicode+BPF   # r22 notes; Perf is opt-in, off
+      root_flavor: bakasu                                     # main.yml mk_entry bakasu BakaSU
+      variant: BakaSU
+      produce_stock_configs: true
+      root_commit: d5e9e025b8b49155f8014684d64c91742b465f65   # BakaSU main tip 2026-10-24 (r22 notes)
+      ksu_branch: 10efe6648aa52e0497bbd686f940832ad05848cf    # KernelSU pin (r22 notes); main.yml passes kernelsu_commit
+      susfs_commit: eb95da080c76724c4962d0c62e9af3be37d9d439  # gki-android12-5.10 (r22 notes, BakaSU column)
+      nomount_commit: e7f7c67681e19ed1e1ee9c902c030e44647035d4
+      kernel_patches_commit: c78291aeb0dca025f21e6b197e0aa4fde42e065d   # main tip at tag time (2026-10-28)
+      anykernel3_commit: e1e9dce98430c5c6f231f7094a8c7f4ecaf50948       # gki-2.0 tip at tag time (2026-07-12)
+      droidspaces_commit: 4344dc5fc4ab981f1cf2df54c93bf32a6ebbdc85
+      brand_name: Wild
+      keep_kmi: false                                         # main.yml default
+      allow_version_mismatch: false
+      use_cache: false                                        # 8d8e033: "build without the bazel cache by default"
+      page_size: 4k

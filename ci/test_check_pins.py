@@ -51,6 +51,25 @@ class CheckPins(unittest.TestCase):
         self.assertEqual(len(p), 1)
         self.assertIn("root_commit", p[0])
 
+    def test_pong_workflow_pins(self):
+        text = (REPO / ".github/workflows/pong.yml").read_text()
+        for pin in ("d5e9e025b8b49155f8014684d64c91742b465f65", "eb95da080c76724c4962d0c62e9af3be37d9d439",
+                    "e7f7c67681e19ed1e1ee9c902c030e44647035d4", "c78291aeb0dca025f21e6b197e0aa4fde42e065d",
+                    "4344dc5fc4ab981f1cf2df54c93bf32a6ebbdc85", "e1e9dce98430c5c6f231f7094a8c7f4ecaf50948"):
+            self.assertIn(pin, text)
+        for line in ("config_file: .github/config/android12-5.10.json", "os_patch_level: 2026-10",
+                     "root_flavor: bakasu", "brand_name: Wild", "page_size: 4k"):
+            self.assertIn(line, text)
+        import json
+        rows = [r for r in json.loads((REPO / ".github/config/android12-5.10.json").read_text())["include"]
+                if r.get("date") == "2026-10"]
+        self.assertEqual(rows, [{"sublevel": "269", "date": "2026-10"}])   # exactly one target: 5.10.269
+        on = text.split("\non:", 1)[1].split("\njobs:", 1)[0]
+        self.assertIn("workflow_dispatch", on)
+        for trigger in ("push", "schedule", "pull_request", "workflow_run"):
+            self.assertNotIn(trigger, on)
+        self.assertEqual([p for p in check_pins.check(REPO) if "pong.yml" in p], [])
+
 
 if __name__ == "__main__":
     unittest.main()
