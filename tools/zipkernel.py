@@ -14,12 +14,20 @@ MAX = 256 << 20   # an arm64 GKI Image is ~40 MB; refuse anything absurd
 
 
 def image(path):
-    with zipfile.ZipFile(path) as z:
-        for info in z.infolist():
-            if posixpath.basename(info.filename) in ("Image", "Image.gz") and info.file_size <= MAX:
-                data = z.read(info)
-                return gzip.decompress(data) if data[:2] == b"\x1f\x8b" else data
-    sys.exit("no Image in zip")
+    # Only a root-level Image is what AnyKernel3 flashes; an Image in a subfolder could be a decoy.
+    try:
+        z = zipfile.ZipFile(path)
+    except zipfile.BadZipFile:
+        sys.exit(f"{path}: not a zip file")
+    with z:
+        found = [i for i in z.infolist() if i.filename in ("Image", "Image.gz")]
+        if len(found) != 1:
+            names = ", ".join(i.filename for i in z.infolist() if posixpath.basename(i.filename).startswith("Image"))
+            sys.exit(f"no Image at the zip root (expected exactly one; found: {names or 'none'})")
+        if found[0].file_size > MAX:
+            sys.exit(f"{found[0].filename} is {found[0].file_size} bytes, over the {MAX}-byte limit")
+        data = z.read(found[0])
+    return gzip.decompress(data) if data[:2] == b"\x1f\x8b" else data
 
 
 def config(img):

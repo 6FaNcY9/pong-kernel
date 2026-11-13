@@ -47,6 +47,22 @@ printf 'echo "REJECT: KMI mismatch"; echo "result: rejected"; exit 1\n' > "$T/pk
 check "pkt identical-reject counts as pass" 0 "^SAME" env PKT="sh $T/pkt-identical" sh tools/verify.sh "$T/same.zip" "$T/running" "$T/version"
 check "any other pkt reject fails" 1 "REJECT: KMI" env PKT="sh $T/pkt-kmi" sh tools/verify.sh "$T/same.zip" "$T/running" "$T/version"
 
+python3 -I - "$T/nested.zip" <<'PY'
+import sys, zipfile
+with zipfile.ZipFile(sys.argv[1], "w") as z:
+    z.writestr("x/Image", b"Linux version 5.10.269-android12-Wild (test) #1\0")
+PY
+check "Image only in a subfolder is not used" 2 "no Image at the zip root" sh tools/verify.sh "$T/nested.zip" "$T/running" "$T/version"
+python3 -I - "$T/decoy.zip" "$T/same.zip" <<'PY'
+import sys, zipfile
+img = zipfile.ZipFile(sys.argv[2]).read("Image")
+with zipfile.ZipFile(sys.argv[1], "w") as z:
+    z.writestr("x/Image", img)                                    # decoy copy of the "running" kernel first
+    z.writestr("Image", img.replace(b"(test) #1", b"(evil) #1"))  # what AnyKernel3 would flash
+PY
+check "root Image is checked, not a decoy in a subfolder" 1 "version differs" sh tools/verify.sh "$T/decoy.zip" "$T/running" "$T/version"
+echo "not a zip" > "$T/bad.zip"
+check "a file that is not a zip is a clear error" 2 "not a zip file" sh tools/verify.sh "$T/bad.zip" "$T/running" "$T/version"
 echo "Linux version 5.10.269-android12-Other (x) #2" > "$T/otherversion"
 check "different version string is DIFFERENT" 1 "version differs" sh tools/verify.sh "$T/same.zip" "$T/running" "$T/otherversion"
 check "pkt that cannot run is an error" 2 "pkt did not finish" env PKT=false sh tools/verify.sh "$T/same.zip" "$T/running" "$T/version"
