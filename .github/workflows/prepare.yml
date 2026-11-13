@@ -105,7 +105,7 @@ jobs:
       version_slug: ${{ steps.final.outputs.version_slug }}
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Read Config and Build Final Matrix
         id: final
@@ -193,7 +193,7 @@ jobs:
       version_slug: ${{ steps.prep.outputs.version_slug }}
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Derive Family and Kernel Versions
         id: prep
@@ -231,7 +231,7 @@ jobs:
           echo "cache_key=${CACHE_KEY}" >> "$GITHUB_OUTPUT"
 
       - name: Restore Stock Config Cache
-        uses: actions/cache/restore@v6
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ${{ runner.temp }}/stock-configs
           key: ${{ steps.heads.outputs.cache_key }}
@@ -306,13 +306,13 @@ jobs:
       - name: Save Stock Config Cache
         if: always()
         continue-on-error: true
-        uses: actions/cache/save@v6
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ${{ runner.temp }}/stock-configs
           key: ${{ steps.heads.outputs.cache_key }}
 
       - name: Upload Stock Configs Artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: stock-configs-${{ steps.prep.outputs.version_slug }}
           path: ${{ runner.temp }}/stock-configs/stock_*.config

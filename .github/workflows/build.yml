@@ -99,12 +99,12 @@ jobs:
     timeout-minutes: 120
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Download Prefetched Stock Configs
         if: inputs.stock_config_artifact != ''
         continue-on-error: true
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           name: ${{ inputs.stock_config_artifact }}
           path: stock-configs
@@ -136,7 +136,7 @@ jobs:
 
       - name: Free Disk Space
         if: true
-        uses: endersonmenezes/free-disk-space@v4 # Use @main for latest, @v3 for stable
+        uses: endersonmenezes/free-disk-space@8b8cd4e2277836962939a8f3b4ea0ee4bc006156 # v4
         with:
           remove_android: true
           remove_dotnet: true
@@ -151,7 +151,7 @@ jobs:
           testing: false
 
       - name: Setup more Swap (for LTO)
-        uses: pierotofy/set-swap-space@master
+        uses: pierotofy/set-swap-space@fc79b3f67fa8a838184ce84a674ca12238d2c761 # master
         with:
           swap-size-gb: 16
 
@@ -414,7 +414,7 @@ jobs:
 
       - name: Upload Rejects
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: ${{ steps.extract.outputs.file_name }}-Rejects
           path: patch-rejects/
@@ -545,7 +545,7 @@ jobs:
 
       - name: Upload Artifacts
         id: kernel-artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: ${{ steps.extract.outputs.file_name }}-AnyKernel3
           path: ${{ github.workspace }}/AnyKernel3/**
@@ -566,7 +566,7 @@ jobs:
           page_size: ${{ inputs.page_size }}
 
       - name: Upload Build Summary + Metadata
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: ${{ steps.extract.outputs.file_name }}-BuildInfo
           path: /tmp/build-summary-${{ steps.build-summary.outputs.summary_base }}.md

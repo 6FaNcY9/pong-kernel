@@ -1,0 +1,14 @@
+name: Check pins
+# Fails if any action or source is not pinned to a commit, or if a secret or key file slipped into the repo.
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  pins:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - run: python3 ci/check_pins.py
+      - run: python3 -m unittest ci/test_check_pins.py -v
