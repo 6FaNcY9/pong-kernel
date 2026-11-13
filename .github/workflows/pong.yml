@@ -7,8 +7,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write  # build.yml declares contents: write; a called workflow cannot get more than the caller grants
-  actions: write   # build.yml uploads artifacts and manages its caches
+  contents: read   # remote scripts run in the build; the token must not be able to write to this repo
+  actions: read
 
 jobs:
   build:

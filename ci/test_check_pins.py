@@ -90,6 +90,13 @@ class CheckPins(unittest.TestCase):
         self.assertNotIn("CONFIG_KSU", cfg)
         self.assertGreater(len(cfg.splitlines()), 5000)
 
+    def test_build_token_cannot_write(self):
+        # remote scripts run inside the build; its token must not be able to push to this public repo
+        for wf in ("pong.yml", "build.yml"):
+            head = (REPO / ".github/workflows" / wf).read_text().split("\njobs:", 1)[0]
+            self.assertIn("contents: read", head, wf)
+            self.assertNotIn(": write", head, wf)
+
 
 if __name__ == "__main__":
     unittest.main()
