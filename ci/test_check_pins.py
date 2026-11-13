@@ -82,6 +82,14 @@ class CheckPins(unittest.TestCase):
         prepare = (REPO / ".github/workflows/prepare.yml").read_text()
         self.assertIn("bbg_commit: ${{ inputs.bbg_commit }}", prepare)
 
+    def test_stock_config_is_committed(self):
+        # stock-config/action.yml prefers config/stock_defconfig over a live download from AOSP main;
+        # it is the config the kernel shows in /proc/config.gz (no KSU lines), not the build's real one
+        cfg = (REPO / "config/stock_defconfig").read_text()
+        self.assertIn("CONFIG_LOCALVERSION_AUTO=y", cfg)
+        self.assertNotIn("CONFIG_KSU", cfg)
+        self.assertGreater(len(cfg.splitlines()), 5000)
+
 
 if __name__ == "__main__":
     unittest.main()

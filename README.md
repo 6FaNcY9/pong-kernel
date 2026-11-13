@@ -37,12 +37,18 @@ Download the zip into a new, empty directory, then:
 sh tools/verify.sh <zip>
 ```
 
-It reads the zip without running anything from it, compares the kernel config with the running one
-(`/proc/config.gz`, because `uname` is spoofed on this phone), shows both version strings and runs `pkt check`.
-`SAME` plus only pkt's "identical to the kernel already running" reject means the build reproduces the phone's kernel.
+It reads the zip without running anything from it and checks three things:
+
+1. **Version string** built == running (`/proc/version`): toolchain, branding and build stamp.
+2. **Embedded config** == `/proc/config.gz`. On this phone both are the *stock GKI config shown for hiding*
+   (it has no `CONFIG_KSU`), so this only proves the shown config, not KSU/susfs/BBG. The build embeds the
+   committed `config/stock_defconfig` (taken from the phone) instead of downloading Google's newest one.
+3. **pkt check**: the real proof is pkt's "identical to the kernel already running" (same Image sha256), printed
+   as `IDENTICAL`. Any other REJECT fails; pkt not finishing is an error.
+
 Allowed config differences, each with a reason, live in `ci/allowed-config-diff.txt` (empty today).
 
-Baseline (2026-11-13): the official r22 zip gives `SAME` (5426 config lines) and the identical version string.
+Baseline (2026-11-13): the official r22 zip gives same version, `SAME` config (5426 lines) and `IDENTICAL`.
 
 ## Flashing
 

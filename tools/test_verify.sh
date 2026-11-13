@@ -25,25 +25,30 @@ check() {  # $1 name, $2 expected exit, $3 expected text, then the command
 CFG='CONFIG_A=y
 CONFIG_B="x"'
 printf '%s\n' "$CFG" > "$T/running"
+echo "Linux version 5.10.269-android12-Wild (test) #1" > "$T/version"
 
 mkzip "$T/same.zip" "$CFG"
-check "same config is SAME" 0 "^SAME" sh tools/verify.sh "$T/same.zip" "$T/running"
+check "same config is SAME" 0 "^SAME" sh tools/verify.sh "$T/same.zip" "$T/running" "$T/version"
 
 mkzip "$T/extra.zip" "$CFG
 CONFIG_EXTRA=y"
-check "unexplained extra line is DIFFERENT" 1 "CONFIG_EXTRA=y" sh tools/verify.sh "$T/extra.zip" "$T/running"
+check "unexplained extra line is DIFFERENT" 1 "CONFIG_EXTRA=y" sh tools/verify.sh "$T/extra.zip" "$T/running" "$T/version"
 
 printf 'CONFIG_EXTRA=y\n' > "$T/allow"
-check "allowed extra line is SAME" 0 "^SAME" env ALLOW="$T/allow" sh tools/verify.sh "$T/extra.zip" "$T/running"
+check "allowed extra line is SAME" 0 "^SAME" env ALLOW="$T/allow" sh tools/verify.sh "$T/extra.zip" "$T/running" "$T/version"
 
 mkzip "$T/noimage.zip" "$CFG" "boot/Other"
-check "zip without Image is an error" 2 "no Image" sh tools/verify.sh "$T/noimage.zip" "$T/running"
+check "zip without Image is an error" 2 "no Image" sh tools/verify.sh "$T/noimage.zip" "$T/running" "$T/version"
 
-check "version string is shown" 0 "Linux version 5.10.269-android12-Wild" sh tools/verify.sh "$T/same.zip" "$T/running"
+check "version string is shown" 0 "Linux version 5.10.269-android12-Wild" sh tools/verify.sh "$T/same.zip" "$T/running" "$T/version"
 
-printf 'echo "REJECT: identical to the kernel already running"; echo "result: rejected"\n' > "$T/pkt-identical"
-printf 'echo "REJECT: KMI mismatch"; echo "result: rejected"\n' > "$T/pkt-kmi"
-check "pkt identical-reject counts as pass" 0 "^SAME" env PKT="sh $T/pkt-identical" sh tools/verify.sh "$T/same.zip" "$T/running"
-check "any other pkt reject fails" 1 "REJECT: KMI" env PKT="sh $T/pkt-kmi" sh tools/verify.sh "$T/same.zip" "$T/running"
+printf 'echo "REJECT: identical to the kernel already running"; echo "result: rejected"; exit 1\n' > "$T/pkt-identical"
+printf 'echo "REJECT: KMI mismatch"; echo "result: rejected"; exit 1\n' > "$T/pkt-kmi"
+check "pkt identical-reject counts as pass" 0 "^SAME" env PKT="sh $T/pkt-identical" sh tools/verify.sh "$T/same.zip" "$T/running" "$T/version"
+check "any other pkt reject fails" 1 "REJECT: KMI" env PKT="sh $T/pkt-kmi" sh tools/verify.sh "$T/same.zip" "$T/running" "$T/version"
+
+echo "Linux version 5.10.269-android12-Other (x) #2" > "$T/otherversion"
+check "different version string is DIFFERENT" 1 "version differs" sh tools/verify.sh "$T/same.zip" "$T/running" "$T/otherversion"
+check "pkt that cannot run is an error" 2 "pkt did not finish" env PKT=false sh tools/verify.sh "$T/same.zip" "$T/running" "$T/version"
 
 exit $fail
