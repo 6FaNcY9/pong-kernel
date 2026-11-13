@@ -56,6 +56,10 @@ on:
         required: false
         type: string
         default: ""
+      bbg_commit:
+        required: false
+        type: string
+        default: ""
       anykernel3_commit:
         required: false
         type: string
@@ -312,6 +316,8 @@ jobs:
       - name: Baseband Guard
         if: (contains(inputs.feature_set, 'BBG') || inputs.feature_set == 'All')
         uses: ./.github/actions/bbg
+        with:
+          commit: ${{ inputs.bbg_commit }}
 
       - name: Setup Networking
         if: contains(inputs.feature_set, 'NET') || inputs.feature_set == 'All'

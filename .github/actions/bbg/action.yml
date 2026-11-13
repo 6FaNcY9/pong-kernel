@@ -1,6 +1,11 @@
 name: Setup Baseband Guard (BBG)
 description: Download and configure Baseband Guard security module
 
+inputs:
+  commit:
+    description: "Baseband-guard commit (full SHA); pong-kernel pins it instead of following main"
+    required: true
+
 runs:
   using: composite
   steps:
@@ -9,7 +14,7 @@ runs:
       with:
         command: |
           set -o pipefail
-          curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors --connect-timeout 30 https://raw.githubusercontent.com/vc-teahouse/Baseband-guard/main/setup.sh | bash
+          curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors --connect-timeout 30 https://raw.githubusercontent.com/vc-teahouse/Baseband-guard/${{ inputs.commit }}/setup.sh | bash -s ${{ inputs.commit }}
         attempts: 5
         delay: 5
         workdir: ${{ github.workspace }}/kernel
@@ -38,6 +43,7 @@ runs:
       working-directory: ${{ github.workspace }}/kernel/Baseband-guard
       run: |
         # Extract and export BBG version info
+        [ "$(git rev-parse HEAD)" = "${{ inputs.commit }}" ] || { echo "[-] Baseband-guard is not at the pinned commit" >&2; exit 1; }
         BBG_COMMIT=$(git rev-parse --short HEAD 2>/dev/null)
         echo "BBG_COMMIT=$BBG_COMMIT" >> $GITHUB_ENV
 

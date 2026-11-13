@@ -27,6 +27,7 @@ jobs:
       nomount_commit: e7f7c67681e19ed1e1ee9c902c030e44647035d4
       kernel_patches_commit: c78291aeb0dca025f21e6b197e0aa4fde42e065d   # main tip at tag time (2026-10-28)
       anykernel3_commit: e1e9dce98430c5c6f231f7094a8c7f4ecaf50948       # gki-2.0 tip at tag time (2026-07-12)
+      bbg_commit: 028ff7fd509e2104596da7cc1ef8e6ce2a0c9082        # Baseband-guard main at tag time (2026-10-26); upstream followed main
       droidspaces_commit: 4344dc5fc4ab981f1cf2df54c93bf32a6ebbdc85
       brand_name: Wild
       keep_kmi: false                                         # main.yml default

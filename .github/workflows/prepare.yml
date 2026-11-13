@@ -46,6 +46,11 @@ on:
         required: false
         type: string
         default: ""
+      bbg_commit:
+        description: "Exact Baseband-guard commit (pong-kernel pins it)"
+        required: false
+        type: string
+        default: ""
       anykernel3_commit:
         description: "Exact AnyKernel3 commit (resolved automatically)"
         required: false
@@ -341,6 +346,7 @@ jobs:
       root_commit: ${{ inputs.root_commit }}
       nomount_commit: ${{ inputs.nomount_commit }}
       kernel_patches_commit: ${{ inputs.kernel_patches_commit }}
+      bbg_commit: ${{ inputs.bbg_commit }}
       anykernel3_commit: ${{ inputs.anykernel3_commit }}
       droidspaces_commit: ${{ inputs.droidspaces_commit }}
       brand_name: ${{ inputs.brand_name }}
