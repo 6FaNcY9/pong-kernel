@@ -1,0 +1,2 @@
+## Config lines allowed to differ between a built kernel and the running one, one exact line each.
+## Every entry needs a "## why" line above it. Baseline 2026-11-13: official r22 zip vs running kernel = no differences.
