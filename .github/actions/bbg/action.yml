@@ -14,6 +14,10 @@ runs:
       with:
         command: |
           set -o pipefail
+          # setup.sh runs `git clone --branch <ref>`, which rejects a commit SHA; so clone and pin first, setup.sh then reuses the clone.
+          rm -rf Baseband-guard
+          git clone -q https://github.com/vc-teahouse/Baseband-guard Baseband-guard
+          git -C Baseband-guard checkout -q ${{ inputs.commit }}
           curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors --connect-timeout 30 https://raw.githubusercontent.com/vc-teahouse/Baseband-guard/${{ inputs.commit }}/setup.sh | bash -s ${{ inputs.commit }}
         attempts: 5
         delay: 5
