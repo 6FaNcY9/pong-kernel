@@ -12,6 +12,7 @@ kernel running on pong (`5.10.269-android12-2026-10-BakaSU-AnyKernel3.zip`). Lic
 | `.github/workflows/main.yml` | builds every family and flavor; replaced by `pong.yml` with one pinned target |
 | `.github/workflows/{managers,release-from-run,sync-matrix,clear-cache,commit-status,opencode}.yml` | publishing, maintenance and bot workflows this repo does not run |
 | `.github/scripts/telegram_digest.py` | posts to Telegram; this repo posts nowhere |
+| `.github/actions/build-metadata/` and its step in `build.yml` | release-catalog JSON; it waits for the `NoMount-Metamodule` artifact, which only main.yml's module job builds, so every run failed after the kernel was done. The kernel-side NoMount patch stays |
 | `.github/ISSUE_TEMPLATE/` | upstream's issue forms |
 
 ## Action pins
