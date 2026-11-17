@@ -1,0 +1,38 @@
+name: Build pong NetHunter kernel
+# Same as pong.yml (the exact r22 kernel) PLUS the NetHunter feature: the gadget configs r22 lacks
+# (OBEX/ECM_SUBSET/RNDIS — HID is already =y in r22), BRIDGE_NETFILTER, and the rtl88xxau injection
+# driver as a loadable module. On-demand kernel: proven via `fastboot boot`, never flashed as the daily.
+# pong.yml stays the untouched r22 reproduction. Manual runs only.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read   # remote scripts run in the build; the token must not be able to write to this repo
+  actions: read
+
+jobs:
+  build:
+    uses: ./.github/workflows/prepare.yml
+    with:
+      runner: ubuntu-24.04                                    # main.yml kernel_runner default
+      config_file: .github/config/android12-5.10.json         # main.yml build-android12-5-10
+      os_patch_level: 2026-10                                 # one row: sublevel 269
+      feature_set: SUSFS+NoMount+BBG+NET+DS+NTSync+Ptrace+Unicode+BPF+NetHunter   # r22 set + NetHunter
+      root_flavor: bakasu                                     # main.yml mk_entry bakasu BakaSU
+      variant: BakaSU                                         # kept identical to r22 (same version string)
+      produce_stock_configs: true
+      root_commit: d5e9e025b8b49155f8014684d64c91742b465f65   # BakaSU main tip 2026-10-24 (r22 notes)
+      ksu_branch: 10efe6648aa52e0497bbd686f940832ad05848cf    # KernelSU pin (r22 notes); main.yml passes kernelsu_commit
+      susfs_commit: eb95da080c76724c4962d0c62e9af3be37d9d439  # gki-android12-5.10 (r22 notes, BakaSU column)
+      nomount_commit: e7f7c67681e19ed1e1ee9c902c030e44647035d4
+      kernel_patches_commit: c78291aeb0dca025f21e6b197e0aa4fde42e065d   # main tip at tag time (2026-10-28)
+      anykernel3_commit: e1e9dce98430c5c6f231f7094a8c7f4ecaf50948       # gki-2.0 tip at tag time (2026-07-12)
+      common_commit: 69ab3fcf48c521f021298acd2647c5f3923a9c4f       # kernel/common android12-5.10-2026-10 head at r22 time (2026-10-26); the branch moved on 2026-11-09
+      bbg_commit: 028ff7fd509e2104596da7cc1ef8e6ce2a0c9082        # Baseband-guard main at tag time (2026-10-26); upstream followed main
+      droidspaces_commit: 4344dc5fc4ab981f1cf2df54c93bf32a6ebbdc85
+      brand_name: Wild
+      keep_kmi: false                                         # main.yml default
+      allow_version_mismatch: false
+      use_cache: false                                        # 8d8e033: "build without the bazel cache by default"
+      page_size: 4k

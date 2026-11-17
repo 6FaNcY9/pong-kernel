@@ -388,6 +388,18 @@ jobs:
           kernel_version: ${{ inputs.kernel_version }}
           sublevel: ${{ steps.extract.outputs.sublevel }}
 
+      # NetHunter: the only gadget functions r22 lacks (HID is already =y) + bridge MITM.
+      # Driver module is added by the separate "NetHunter WiFi Driver" step below.
+      - name: NetHunter Kernel Config
+        if: contains(inputs.feature_set, 'NetHunter')
+        uses: ./.github/actions/set-kernel-config
+        with:
+          config_list: |
+            CONFIG_USB_CONFIGFS_OBEX=y
+            CONFIG_USB_CONFIGFS_ECM_SUBSET=y
+            CONFIG_USB_CONFIGFS_RNDIS=y
+            CONFIG_BRIDGE_NETFILTER=y
+
       - name: Apply Device-Specific Patches
         uses: ./.github/actions/apply-device-patches
         with:
