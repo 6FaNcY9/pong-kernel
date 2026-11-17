@@ -1,2 +1,12 @@
 ## Config lines allowed to differ between a built kernel and the running one, one exact line each.
 ## Every entry needs a "## why" line above it. Baseline 2026-11-13: official r22 zip vs running kernel = no differences.
+
+## NetHunter variant (pong-nethunter.yml only) — gadget functions r22 lacks; HID is already =y in r22.
+## why: USB OBEX gadget for NetHunter USB attacks
+CONFIG_USB_CONFIGFS_OBEX=y
+## why: CDC ECM subset gadget (NetHunter USB networking)
+CONFIG_USB_CONFIGFS_ECM_SUBSET=y
+## why: RNDIS gadget for USB tethering / MITM
+CONFIG_USB_CONFIGFS_RNDIS=y
+## why: bridge netfilter (ebtables) for bridge-based MITM
+CONFIG_BRIDGE_NETFILTER=y
