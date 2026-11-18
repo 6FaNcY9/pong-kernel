@@ -526,7 +526,15 @@ jobs:
           # out-of-tree driver carries genuine -W{,sometimes-}uninitialized warnings.
           # Demote -Werror for the module only so those stay warnings (CRCs unaffected).
           sed -i '0,/^EXTRA_CFLAGS += /s//EXTRA_CFLAGS += -Wno-error  # GKI builds OOT modules with global -Werror; demote for this driver\n&/' 8812au/Makefile
-          grep -nE '^CONFIG_PLATFORM_(I386_PC|ANDROID_ARM64) =|^KSRC := \$\(KERNEL_SRC\)|Wno-cast-function-type|Wno-stringop-overread|^EXTRA_CFLAGS \+= -Wno-error' 8812au/Makefile
+          # The ANDROID_ARM64 preset enables RTW_ENABLE_WIFI_CONTROL_FUNC, an embedded
+          # GPIO/platform wifi power-sequencing feature meant for SDIO chips, not a USB
+          # adapter. It #includes <linux/wlan_plat.h>, which GKI 5.10 does not ship. The
+          # driver defines inline no-op stubs when the macro is off, so dropping it compiles
+          # the feature (and the missing header) out cleanly. Every other macro the block
+          # sets (CONFIG_RADIO_WORK, CONFIG_IOCTL_CFG80211, CFG80211 shims, P2P_IPS) is USB-
+          # relevant and kept. earlysuspend.h/wakelock.h stay gated off (their configs unset).
+          sed -i 's/^EXTRA_CFLAGS += -DRTW_ENABLE_WIFI_CONTROL_FUNC -DCONFIG_RADIO_WORK$/EXTRA_CFLAGS += -DCONFIG_RADIO_WORK  # dropped RTW_ENABLE_WIFI_CONTROL_FUNC (pulls GKI-absent linux\/wlan_plat.h)/' 8812au/Makefile
+          grep -nE '^CONFIG_PLATFORM_(I386_PC|ANDROID_ARM64) =|^KSRC := \$\(KERNEL_SRC\)|Wno-cast-function-type|Wno-stringop-overread|^EXTRA_CFLAGS \+= -Wno-error|^EXTRA_CFLAGS \+= -DCONFIG_RADIO_WORK' 8812au/Makefile
 
       - name: Build Normal Kernel
         env:
