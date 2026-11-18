@@ -536,6 +536,35 @@ jobs:
           sed -i 's/^EXTRA_CFLAGS += -DRTW_ENABLE_WIFI_CONTROL_FUNC -DCONFIG_RADIO_WORK$/EXTRA_CFLAGS += -DCONFIG_RADIO_WORK  # dropped RTW_ENABLE_WIFI_CONTROL_FUNC (pulls GKI-absent linux\/wlan_plat.h)/' 8812au/Makefile
           grep -nE '^CONFIG_PLATFORM_(I386_PC|ANDROID_ARM64) =|^KSRC := \$\(KERNEL_SRC\)|Wno-cast-function-type|Wno-stringop-overread|^EXTRA_CFLAGS \+= -Wno-error|^EXTRA_CFLAGS \+= -DCONFIG_RADIO_WORK' 8812au/Makefile
 
+          # --- Strategy 2b: resolve the 31 cfg80211/mac80211 imports against r22's stock KMI ---
+          # These symbols live in the device's cfg80211/mac80211 GKI modules, not in vmlinux,
+          # so modpost cannot see them from vmlinux.symvers alone and errors "undefined!".
+          # Feed it a committed stock symbol+CRC table (public GKI exports, no device IDs) via
+          # KBUILD_EXTRA_SYMBOLS so the module's __versions carry the device's stock CRCs.
+          cp "${{ github.workspace }}/.github/wifi/stock-wifi.symvers" 8812au/stock-wifi.symvers
+          DRV_ABS="$PWD/8812au"
+          # Primary (architect's mechanism): top-level make var in the module Makefile, read in
+          # the kbuild pass. Plus an env export as backup (build.sh passes env through to kbuild).
+          echo "KBUILD_EXTRA_SYMBOLS := $DRV_ABS/stock-wifi.symvers" >> 8812au/Makefile
+          echo "KBUILD_EXTRA_SYMBOLS=$DRV_ABS/stock-wifi.symvers" >> "$GITHUB_ENV"
+          echo "stock-wifi.symvers entries: $(wc -l < 8812au/stock-wifi.symvers)  path: $DRV_ABS/stock-wifi.symvers"
+          grep -n KBUILD_EXTRA_SYMBOLS common/scripts/Makefile.modpost || echo "note: no literal KBUILD_EXTRA_SYMBOLS in Makefile.modpost; make-var/env path still applies"
+
+          # --- Strip the 4 symbols absent from r22's trimmed vmlinux KMI (debug / optional
+          # file-I/O only; NOT the USB probe, cfg80211 registration, or monitor/injection path) ---
+          # proc_get_parent_data: whole /proc debug iface is gated by CONFIG_PROC_DEBUG; disable it
+          # (callers fall back to no-op stub macros in rtw_proc.h).
+          sed -i 's|^#define CONFIG_PROC_DEBUG$|/* #define CONFIG_PROC_DEBUG */  /* disabled: proc_get_parent_data not in r22 KMI (debug-only) */|' 8812au/include/rtl_autoconf.h
+          # kernel_read/kernel_write: only in readFile/writeFile (optional PHY-param/FW-from-file;
+          # built-in arrays are the default). Return -EINVAL so callers take the built-in path.
+          sed -i 's|rlen = kernel_read(fp, buf + sum, len - sum, &fp->f_pos);|rlen = -EINVAL;  /* kernel_read not in r22 KMI; file I/O disabled, built-in arrays used */|' 8812au/os_dep/osdep_service.c
+          sed -i 's|wlen = kernel_write(fp, buf + sum, len - sum, &fp->f_pos);|wlen = -EINVAL;  /* kernel_write not in r22 KMI; file I/O disabled */|' 8812au/os_dep/osdep_service.c
+          # yield(): only in rtw_yield_os(); schedule() is equivalent here and is KMI-exported.
+          sed -i 's|^\tyield();|\tschedule();  /* yield() not in r22 KMI */|' 8812au/os_dep/osdep_service.c
+          echo "post-strip check (expect no live kernel_read/kernel_write/yield() lines):"
+          grep -nE 'kernel_read|kernel_write|^\tyield\(\);' 8812au/os_dep/osdep_service.c || echo "  none remain"
+          grep -nE '#define CONFIG_PROC_DEBUG' 8812au/include/rtl_autoconf.h || echo "  CONFIG_PROC_DEBUG disabled"
+
       - name: Build Normal Kernel
         env:
           SOURCE_DATE_EPOCH: ${{ env.SOURCE_DATE_EPOCH }}
