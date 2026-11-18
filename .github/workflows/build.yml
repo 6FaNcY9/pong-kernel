@@ -500,6 +500,21 @@ jobs:
           version: ${{ inputs.version }}
           allow_version_mismatch: true
 
+      - name: Fetch NetHunter WiFi Driver (rtl8812au, out-of-tree)
+        if: contains(inputs.feature_set, 'RtlDriver')
+        shell: bash
+        working-directory: ${{ github.workspace }}/kernel
+        run: |
+          set -euo pipefail
+          # Fullmac RTL8812AU built OOT against the just-built GKI, so modversion CRCs
+          # come from THIS kernel's Module.symvers (= r22 KMI, no config deltas). Pinned.
+          DRV_PIN=734485506a30d6237c2deaad666a19f8ca5379f2
+          git clone https://github.com/aircrack-ng/rtl8812au 8812au
+          git -C 8812au -c advice.detachedHead=false checkout "$DRV_PIN"
+          sed -i 's/^CONFIG_PLATFORM_I386_PC = y/CONFIG_PLATFORM_I386_PC = n/' 8812au/Makefile
+          sed -i 's/^CONFIG_PLATFORM_ANDROID_ARM64 = n/CONFIG_PLATFORM_ANDROID_ARM64 = y/' 8812au/Makefile
+          grep -nE '^CONFIG_PLATFORM_(I386_PC|ANDROID_ARM64) =' 8812au/Makefile
+
       - name: Build Normal Kernel
         env:
           SOURCE_DATE_EPOCH: ${{ env.SOURCE_DATE_EPOCH }}
@@ -510,6 +525,7 @@ jobs:
         with:
           version: ${{ inputs.version }}
           page_size: ${{ inputs.page_size }}
+          ext_modules: ${{ contains(inputs.feature_set, 'RtlDriver') && '8812au' || '' }}
 
       - name: Get Cache Stats
         uses: ./.github/actions/cache-stats
@@ -575,6 +591,29 @@ jobs:
           if-no-files-found: ignore
           compression-level: 9
 
+      - name: Collect rtl8812au module
+        if: contains(inputs.feature_set, 'RtlDriver')
+        shell: bash
+        run: |
+          set -uo pipefail
+          KO="$(find /home/runner/out -name '88XXau.ko' -type f 2>/dev/null | head -n1)"
+          if [ -z "$KO" ]; then
+            echo "88XXau.ko NOT found under /home/runner/out — ext-module build failed." >&2
+            find /home/runner/out -name '*.ko' 2>/dev/null | grep -i 8812 || true
+            exit 1
+          fi
+          mkdir -p "${{ github.workspace }}/rtl8812au-out"
+          cp "$KO" "${{ github.workspace }}/rtl8812au-out/"
+          modinfo "$KO" 2>/dev/null | head -20 || true
+          sha256sum "${{ github.workspace }}/rtl8812au-out/88XXau.ko"
+      - name: Upload rtl8812au artifact
+        if: contains(inputs.feature_set, 'RtlDriver')
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: ${{ steps.extract.outputs.file_name }}-rtl8812au
+          path: ${{ github.workspace }}/rtl8812au-out/**
+          if-no-files-found: error
+          compression-level: 9
       - name: Upload Build Summary + Metadata
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:

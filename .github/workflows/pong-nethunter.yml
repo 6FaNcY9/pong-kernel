@@ -1,7 +1,8 @@
 name: Build pong NetHunter kernel
-# Same as pong.yml (the exact r22 kernel) PLUS the NetHunter feature: the gadget configs r22 lacks
-# (OBEX/ECM_SUBSET/RNDIS — HID is already =y in r22), BRIDGE_NETFILTER, and the rtl88xxau injection
-# driver as a loadable module. On-demand kernel: proven via `fastboot boot`, never flashed as the daily.
+# Builds plain r22 + the rtl8812au OOT injection module (the abandoned NetHunter kernel-config path
+# is NOT used). The kernel itself stays byte-identical to r22 (no config deltas), and the rtl88xxau
+# injection driver is built out-of-tree against it as a loadable module whose modversion CRCs match
+# r22's frozen KMI. On-demand kernel: proven via `fastboot boot`, never flashed as the daily.
 # pong.yml stays the untouched r22 reproduction. Manual runs only.
 
 on:
@@ -18,7 +19,7 @@ jobs:
       runner: ubuntu-24.04                                    # main.yml kernel_runner default
       config_file: .github/config/android12-5.10.json         # main.yml build-android12-5-10
       os_patch_level: 2026-10                                 # one row: sublevel 269
-      feature_set: SUSFS+NoMount+BBG+NET+DS+NTSync+Ptrace+Unicode+BPF+NetHunter   # r22 set + NetHunter
+      feature_set: SUSFS+NoMount+BBG+NET+DS+NTSync+Ptrace+Unicode+BPF+RtlDriver   # plain r22 + OOT driver
       root_flavor: bakasu                                     # main.yml mk_entry bakasu BakaSU
       variant: BakaSU                                         # kept identical to r22 (same version string)
       produce_stock_configs: true

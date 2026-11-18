@@ -14,6 +14,11 @@ inputs:
     required: false
     type: boolean
     default: false
+  ext_modules:
+    description: 'Space-separated external module dirs (relative to kernel ROOT_DIR) built via build.sh EXT_MODULES. Empty (default) = skip, unchanged behaviour.'
+    required: false
+    type: string
+    default: ''
 runs:
   using: composite
   steps:
@@ -61,20 +66,27 @@ runs:
             echo "ERROR: page_size=${PAGE_SIZE} is only supported by the Kleaf (Bazel) build; this tree uses build/build.sh." >&2
             exit 1
           fi
-          BUILD_GKI_ARTIFACTS="" \
-          BUILD_GKI_CERTIFICATION_TOOLS=0 \
-          BUILD_SYSTEM_DLKM=0 \
-          SKIP_VENDOR_BOOT=1 \
-          SKIP_EXT_MODULES=1 \
-          SKIP_CP_KERNEL_HDR=1 \
-          OUT_DIR="/home/runner/out" \
-          LTO=thin \
-          BUILD_CONFIG=common/build.config.gki.aarch64 \
-          CC="/usr/bin/ccache clang" \
-          CXX="/usr/bin/ccache clang++" \
-          HOSTCC="/usr/bin/ccache clang" \
-          HOSTCXX="/usr/bin/ccache clang++" \
-          build/build.sh -j"$(nproc)"
+          BUILD_ENV=(
+            BUILD_GKI_ARTIFACTS=""
+            BUILD_GKI_CERTIFICATION_TOOLS=0
+            BUILD_SYSTEM_DLKM=0
+            SKIP_VENDOR_BOOT=1
+            SKIP_CP_KERNEL_HDR=1
+            OUT_DIR="/home/runner/out"
+            LTO=thin
+            BUILD_CONFIG=common/build.config.gki.aarch64
+            CC="/usr/bin/ccache clang"
+            CXX="/usr/bin/ccache clang++"
+            HOSTCC="/usr/bin/ccache clang"
+            HOSTCXX="/usr/bin/ccache clang++"
+          )
+          if [ -n "${{ inputs.ext_modules }}" ]; then
+            echo "Building external modules via build.sh EXT_MODULES: ${{ inputs.ext_modules }}"
+            BUILD_ENV+=( "EXT_MODULES=${{ inputs.ext_modules }}" )
+          else
+            BUILD_ENV+=( SKIP_EXT_MODULES=1 )
+          fi
+          env "${BUILD_ENV[@]}" build/build.sh -j"$(nproc)"
         else
           sed -i '/name = "kernel_aarch64",/a\    check_defconfig = "disabled",' common/BUILD.bazel
           PAGE_SIZE_FLAGS=()
