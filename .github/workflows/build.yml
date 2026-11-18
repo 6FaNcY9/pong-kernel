@@ -518,7 +518,11 @@ jobs:
           # Makefile with KERNEL_SRC=<kernel tree> (and O=/LLVM=1 as command-line vars that
           # propagate to the inner $(MAKE)); point KSRC at that so -C hits the real tree.
           sed -i '/^ifeq (\$(CONFIG_PLATFORM_ANDROID_ARM64), y)/a KSRC := $(KERNEL_SRC)' 8812au/Makefile
-          grep -nE '^CONFIG_PLATFORM_(I386_PC|ANDROID_ARM64) =|^KSRC := \$\(KERNEL_SRC\)' 8812au/Makefile
+          # Drop two GCC-only global warning flags: the GKI prebuilt clang-12 rejects them
+          # under -Werror,-Wunknown-warning-option. All other -Wno-* flags are clang-known.
+          sed -i 's/^EXTRA_CFLAGS += -Wno-cast-function-type$/#&  # clang: unknown warning option/' 8812au/Makefile
+          sed -i 's/^EXTRA_CFLAGS += -Wno-stringop-overread$/#&  # clang: unknown warning option/' 8812au/Makefile
+          grep -nE '^CONFIG_PLATFORM_(I386_PC|ANDROID_ARM64) =|^KSRC := \$\(KERNEL_SRC\)|Wno-cast-function-type|Wno-stringop-overread' 8812au/Makefile
 
       - name: Build Normal Kernel
         env:
