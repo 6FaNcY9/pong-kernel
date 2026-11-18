@@ -522,7 +522,11 @@ jobs:
           # under -Werror,-Wunknown-warning-option. All other -Wno-* flags are clang-known.
           sed -i 's/^EXTRA_CFLAGS += -Wno-cast-function-type$/#&  # clang: unknown warning option/' 8812au/Makefile
           sed -i 's/^EXTRA_CFLAGS += -Wno-stringop-overread$/#&  # clang: unknown warning option/' 8812au/Makefile
-          grep -nE '^CONFIG_PLATFORM_(I386_PC|ANDROID_ARM64) =|^KSRC := \$\(KERNEL_SRC\)|Wno-cast-function-type|Wno-stringop-overread' 8812au/Makefile
+          # The GKI kernel compiles OOT modules under its own global -Werror; this
+          # out-of-tree driver carries genuine -W{,sometimes-}uninitialized warnings.
+          # Demote -Werror for the module only so those stay warnings (CRCs unaffected).
+          sed -i '0,/^EXTRA_CFLAGS += /s//EXTRA_CFLAGS += -Wno-error  # GKI builds OOT modules with global -Werror; demote for this driver\n&/' 8812au/Makefile
+          grep -nE '^CONFIG_PLATFORM_(I386_PC|ANDROID_ARM64) =|^KSRC := \$\(KERNEL_SRC\)|Wno-cast-function-type|Wno-stringop-overread|^EXTRA_CFLAGS \+= -Wno-error' 8812au/Makefile
 
       - name: Build Normal Kernel
         env:
