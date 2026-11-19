@@ -608,6 +608,15 @@ jobs:
           }1' 8812au/include/rtw_debug.h > 8812au/include/rtw_debug.h.new
           mv 8812au/include/rtw_debug.h.new 8812au/include/rtw_debug.h
           echo "proc-debug shim: $(grep -c 'void) { return\|void) {}' 8812au/core/rtw_debug.c) defs appended; decl block present: $(grep -c '^#ifndef CONFIG_PROC_DEBUG' 8812au/include/rtw_debug.h)"
+          # build.sh runs a "modules_install" pass on the ext module, but the aircrack
+          # Makefile has no modules_install target (only a local-system install: needing
+          # MODDESTDIR/KVER we do not set) -> "No rule to make target modules_install" (exit 2)
+          # AFTER 88XXau.ko already linked. The .ko is collected straight from the build tree
+          # below (it is never baked into the kernel image; it loads on-demand via insmod),
+          # so a no-op modules_install target lets build.sh finish cleanly.
+          printf '\nmodules_install:\n\t@echo "ext-module install skipped; .ko collected from build tree"\n' >> 8812au/Makefile
+          sed -i 's/^\.PHONY: modules clean/.PHONY: modules modules_install clean/' 8812au/Makefile
+          grep -nE '^modules_install:|^\.PHONY:' 8812au/Makefile
 
       - name: Build Normal Kernel
         env:
@@ -690,7 +699,7 @@ jobs:
         shell: bash
         run: |
           set -uo pipefail
-          KO="$(find /home/runner/out -name '88XXau.ko' -type f 2>/dev/null | head -n1)"
+          KO="$(find /home/runner/out /home/runner/work -name '88XXau.ko' -type f 2>/dev/null | head -n1)"
           if [ -z "$KO" ]; then
             echo "88XXau.ko NOT found under /home/runner/out — ext-module build failed." >&2
             find /home/runner/out -name '*.ko' 2>/dev/null | grep -i 8812 || true
