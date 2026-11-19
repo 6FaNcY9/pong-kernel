@@ -565,6 +565,50 @@ jobs:
           grep -nE 'kernel_read|kernel_write|^\tyield\(\);' 8812au/os_dep/osdep_service.c || echo "  none remain"
           grep -nE '#define CONFIG_PROC_DEBUG' 8812au/include/rtl_autoconf.h || echo "  CONFIG_PROC_DEBUG disabled"
 
+          # --- Re-provide the 9 PROC_DEBUG-gated helpers that always-on code still calls ---
+          # Disabling CONFIG_PROC_DEBUG above also drops these small helper/test hooks, yet core
+          # always-on code calls them: rtw_cmd.c (AP hi-queue wait), rtw_mlme_ext.c (sta/ap
+          # linking-test hooks), rtl8812a_hal_init.c (fwdl-test hooks) -> implicit-declaration
+          # (fatal under GKI -Werror) and, if silenced, undefined symbols at modpost/link.
+          # Re-add them with upstream production defaults (g_wait_hiq_empty_ms is 0; every test
+          # hook returns "no forced failure"), gated #ifndef CONFIG_PROC_DEBUG so the real
+          # definitions win whenever proc-debug is enabled. Module-internal only (no KMI impact).
+          awk 'BEGIN{
+            print "";
+            print "#ifndef CONFIG_PROC_DEBUG";
+            print "/* r22 NetHunter shim: CONFIG_PROC_DEBUG off (proc_get_parent_data absent from the";
+            print "   trimmed GKI KMI). These live under CONFIG_PROC_DEBUG upstream but are called by";
+            print "   always-on code; provide production-default bodies. */";
+            print "u32 rtw_get_wait_hiq_empty_ms(void) { return 0; }";
+            print "void rtw_sta_linking_test_set_start(void) {}";
+            print "bool rtw_sta_linking_test_wait_done(void) { return _TRUE; }";
+            print "bool rtw_sta_linking_test_force_fail(void) { return _FALSE; }";
+            print "u16 rtw_ap_linking_test_force_auth_fail(void) { return 0; }";
+            print "u16 rtw_ap_linking_test_force_asoc_fail(void) { return 0; }";
+            print "bool rtw_del_rx_ampdu_test_trigger_no_tx_fail(void) { return _FALSE; }";
+            print "bool rtw_fwdl_test_trigger_chksum_fail(void) { return _FALSE; }";
+            print "bool rtw_fwdl_test_trigger_wintint_rdy_fail(void) { return _FALSE; }";
+            print "#endif /* !CONFIG_PROC_DEBUG */";
+          }' >> 8812au/core/rtw_debug.c
+          # Matching prototypes, inserted just before the rtw_debug.h include-guard #endif so the
+          # call sites in other translation units see real declarations (not implicit int).
+          awk '/#endif \/\* __RTW_DEBUG_H__ \*\// && !d{
+            print "#ifndef CONFIG_PROC_DEBUG";
+            print "u32 rtw_get_wait_hiq_empty_ms(void);";
+            print "void rtw_sta_linking_test_set_start(void);";
+            print "bool rtw_sta_linking_test_wait_done(void);";
+            print "bool rtw_sta_linking_test_force_fail(void);";
+            print "u16 rtw_ap_linking_test_force_auth_fail(void);";
+            print "u16 rtw_ap_linking_test_force_asoc_fail(void);";
+            print "bool rtw_del_rx_ampdu_test_trigger_no_tx_fail(void);";
+            print "bool rtw_fwdl_test_trigger_chksum_fail(void);";
+            print "bool rtw_fwdl_test_trigger_wintint_rdy_fail(void);";
+            print "#endif /* !CONFIG_PROC_DEBUG */";
+            d=1
+          }1' 8812au/include/rtw_debug.h > 8812au/include/rtw_debug.h.new
+          mv 8812au/include/rtw_debug.h.new 8812au/include/rtw_debug.h
+          echo "proc-debug shim: $(grep -c 'void) { return\|void) {}' 8812au/core/rtw_debug.c) defs appended; decl block present: $(grep -c '^#ifndef CONFIG_PROC_DEBUG' 8812au/include/rtw_debug.h)"
+
       - name: Build Normal Kernel
         env:
           SOURCE_DATE_EPOCH: ${{ env.SOURCE_DATE_EPOCH }}
