@@ -1,5 +1,6 @@
 name: Build pong NetHunter kernel
-# Builds plain r22 + the rtl8812au OOT injection module (the abandoned NetHunter kernel-config path
+# Builds plain r22 + the rtl8812au OOT injection module + the hci_vhci Bluetooth module (bluebinder)
+# (the abandoned NetHunter kernel-config path
 # is NOT used). The kernel itself stays byte-identical to r22 (no config deltas), and the rtl88xxau
 # injection driver is built out-of-tree against it as a loadable module whose modversion CRCs match
 # r22's frozen KMI. On-demand kernel: proven via `fastboot boot`, never flashed as the daily.
@@ -19,7 +20,7 @@ jobs:
       runner: ubuntu-24.04                                    # main.yml kernel_runner default
       config_file: .github/config/android12-5.10.json         # main.yml build-android12-5-10
       os_patch_level: 2026-10                                 # one row: sublevel 269
-      feature_set: SUSFS+NoMount+BBG+NET+DS+NTSync+Ptrace+Unicode+BPF+RtlDriver   # plain r22 + OOT driver
+      feature_set: SUSFS+NoMount+BBG+NET+DS+NTSync+Ptrace+Unicode+BPF+RtlDriver+BtVhci   # plain r22 + OOT modules
       root_flavor: bakasu                                     # main.yml mk_entry bakasu BakaSU
       variant: BakaSU                                         # kept identical to r22 (same version string)
       produce_stock_configs: true

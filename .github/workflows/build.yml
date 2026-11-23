@@ -618,6 +618,25 @@ jobs:
           sed -i 's/^\.PHONY: modules clean/.PHONY: modules modules_install clean/' 8812au/Makefile
           grep -nE '^modules_install:|^\.PHONY:' 8812au/Makefile
 
+      - name: Prepare Bluetooth VHCI module (hci_vhci, out-of-tree)
+        if: contains(inputs.feature_set, 'BtVhci')
+        shell: bash
+        working-directory: ${{ github.workspace }}/kernel
+        run: |
+          set -euo pipefail
+          # bluebinder hands the phone's own Bluetooth chip (Android HAL) to Kali through /dev/vhci.
+          # r22 has CONFIG_BT=y but no CONFIG_BT_HCIVHCI. Build the in-tree driver source of this same
+          # pinned kernel/common as an external module, so the kernel image and config stay r22.
+          # Every symbol it imports (hci_*, misc_*, skb_*, ...) is in r22's trimmed KMI (checked
+          # against the phone's /proc/kallsyms on 2026-11-23).
+          mkdir -p btvhci
+          cp common/drivers/bluetooth/hci_vhci.c btvhci/
+          echo 'obj-m := hci_vhci.o' > btvhci/Kbuild
+          # Same no-op modules_install as 8812au: the .ko is collected from the build tree below.
+          printf 'KERNEL_SRC ?= /lib/modules/$(shell uname -r)/build\nM ?= $(shell pwd)\n\nmodules clean:\n\t$(MAKE) -C $(KERNEL_SRC) M=$(M) $@\n\nmodules_install:\n\t@echo "ext-module install skipped; .ko collected from build tree"\n\n.PHONY: modules modules_install clean\n' > btvhci/Makefile
+          cat btvhci/Kbuild btvhci/Makefile
+          sha256sum btvhci/hci_vhci.c
+
       - name: Build Normal Kernel
         env:
           SOURCE_DATE_EPOCH: ${{ env.SOURCE_DATE_EPOCH }}
@@ -628,7 +647,7 @@ jobs:
         with:
           version: ${{ inputs.version }}
           page_size: ${{ inputs.page_size }}
-          ext_modules: ${{ contains(inputs.feature_set, 'RtlDriver') && '8812au' || '' }}
+          ext_modules: ${{ format('{0} {1}', contains(inputs.feature_set, 'RtlDriver') && '8812au' || '', contains(inputs.feature_set, 'BtVhci') && 'btvhci' || '') }}
 
       - name: Get Cache Stats
         uses: ./.github/actions/cache-stats
@@ -715,6 +734,28 @@ jobs:
         with:
           name: ${{ steps.extract.outputs.file_name }}-rtl8812au
           path: ${{ github.workspace }}/rtl8812au-out/**
+          if-no-files-found: error
+          compression-level: 9
+      - name: Collect hci_vhci module
+        if: contains(inputs.feature_set, 'BtVhci')
+        shell: bash
+        run: |
+          set -uo pipefail
+          KO="$(find /home/runner/out /home/runner/work -name 'hci_vhci.ko' -type f 2>/dev/null | head -n1)"
+          if [ -z "$KO" ]; then
+            echo "hci_vhci.ko NOT found — ext-module build failed." >&2
+            exit 1
+          fi
+          mkdir -p "${{ github.workspace }}/btvhci-out"
+          cp "$KO" "${{ github.workspace }}/btvhci-out/"
+          modinfo "$KO" 2>/dev/null | head -20 || true
+          sha256sum "${{ github.workspace }}/btvhci-out/hci_vhci.ko"
+      - name: Upload hci_vhci artifact
+        if: contains(inputs.feature_set, 'BtVhci')
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: ${{ steps.extract.outputs.file_name }}-btvhci
+          path: ${{ github.workspace }}/btvhci-out/**
           if-no-files-found: error
           compression-level: 9
       - name: Upload Build Summary + Metadata

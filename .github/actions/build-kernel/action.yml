@@ -80,9 +80,11 @@ runs:
             HOSTCC="/usr/bin/ccache clang"
             HOSTCXX="/usr/bin/ccache clang++"
           )
-          if [ -n "${{ inputs.ext_modules }}" ]; then
-            echo "Building external modules via build.sh EXT_MODULES: ${{ inputs.ext_modules }}"
-            BUILD_ENV+=( "EXT_MODULES=${{ inputs.ext_modules }}" )
+          # The caller joins optional module dirs with spaces, so " " means none: trim first.
+          EXT_MODS="$(echo "${{ inputs.ext_modules }}" | xargs)"
+          if [ -n "$EXT_MODS" ]; then
+            echo "Building external modules via build.sh EXT_MODULES: $EXT_MODS"
+            BUILD_ENV+=( "EXT_MODULES=$EXT_MODS" )
           else
             BUILD_ENV+=( SKIP_EXT_MODULES=1 )
           fi
